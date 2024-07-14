@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Details</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      #container {
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      label {
+        font-weight: bold;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      #output {
+        margin-top: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      #loading {
+        display: none;
+        text-align: center;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h2>Get Student Details</h2>
+      <form id="detailsForm">
+        <label for="registrationNumber">Registration Number:</label>
+        <input
+          type="text"
+          id="registrationNumber"
+          name="registrationNumber"
+          required
+        />
+        <button type="submit" id="getDetailsBtn">Get Details</button>
+      </form>
+      <div id="loading">Loading...</div>
+      <div id="output"></div>
+    </div>
+
+    <script>
+      document
+        .getElementById("detailsForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          var registrationNumber =
+            document.getElementById("registrationNumber").value;
+          getStudentDetails(registrationNumber);
+        });
+
+      function getStudentDetails(registrationNumber) {
+        var url1 = `https://student-management-qr9p.onrender.com/allprofiles/${registrationNumber}`;
+        var url2 = `https://svhostel.onrender.com/studentdetails/${registrationNumber}`;
+        var url3 = `https://svhospitalmanagement.onrender.com/getalldetails/${registrationNumber}`;
+        // var url3 = http://localhost:4000/getalldetails/${registrationNumber};
+
+        document.getElementById("loading").style.display = "block";
+
+        Promise.all([fetch(url1), fetch(url2), fetch(url3)])
+          .then(function (responses) {
+            return Promise.all(
+              responses.map(function (response) {
+                return response.json();
+              })
+            );
+          })
+          .then(function (data) {
+            document.getElementById("loading").style.display = "none";
+            var output = document.getElementById("output");
+            output.innerHTML = `
+<h3>Details from STUDENT MANAGEMENT</h3>
+${generateTable(flattenData(data[0].user))}
+<h3>Details from HOSTEL MANAGEMENT</h3>
+${generateTable(flattenData(data[1].data))}
+<h3>Details from HOSPITAL MANAGEMENT</h3>
+${generateTable(flattenData(data[2]))}
+`;
+          })
+          .catch(function (error) {
+            console.log("Error fetching data:", error);
+            document.getElementById("loading").style.display = "none";
+          });
+      }
+
+      function flattenData(data) {
+        var flattened = {};
+        for (var key in data) {
+          if (key !== "password" && key !== "confirmpassword") {
+            if (typeof data[key] === "object" && !Array.isArray(data[key])) {
+              var nested = flattenData(data[key]);
+              for (var nestedKey in nested) {
+                flattened[key + "_" + nestedKey] = nested[nestedKey];
+              }
+            } else if (Array.isArray(data[key])) {
+              flattened[key] = data[key]
+                .map((item) =>
+                  typeof item === "object" ? JSON.stringify(item) : item
+                )
+                .join(", ");
+            } else {
+              flattened[key] = data[key];
+            }
+          }
+        }
+        return flattened;
+      }
+
+      function generateTable(data) {
+        var table = "<table>";
+        for (var key in data) {
+          table += "<tr><th>" + key + "</th><td>" + data[key] + "</td></tr>";
+        }
+        table += "</table>";
+        return table;
+      }
+    </script>
+  </body>
+</html>
